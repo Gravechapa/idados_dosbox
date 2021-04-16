@@ -78,8 +78,11 @@
     <Filter Include="Source Files\idados">
       <UniqueIdentifier>{6939f2f2-577e-4f9b-9fee-0d2e2742bf18}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\ida_server">
+    <Filter Include="Source Files\debug\ida_server">
       <UniqueIdentifier>{d8e5739d-e6b4-40b9-a084-8ac4c54c4424}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\hardware\sound\mame">
+      <UniqueIdentifier>{fe3dc44b-a4de-4294-a038-e5aface56804}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -426,7 +429,7 @@
       <Filter>Source Files\fpu</Filter>
     </ClCompile>
     <ClCompile Include="..\src\debug\server.cpp">
-      <Filter>Source Files\ida_server</Filter>
+      <Filter>Source Files\debug\ida_server</Filter>
     </ClCompile>
     <ClCompile Include="..\..\debugger\debmod.cpp">
       <Filter>Source Files\ida_debugger_plugin</Filter>
@@ -451,6 +454,24 @@
     </ClCompile>
     <ClCompile Include="..\idados\dosbox_debmod.cpp">
       <Filter>Source Files\idados</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\dos\drive_overlay.cpp">
+      <Filter>Source Files\dos\drives</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\hardware\mame\fmopl.cpp">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\hardware\mame\saa1099.cpp">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\hardware\mame\sn76496.cpp">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\hardware\mame\ymdeltat.cpp">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\hardware\mame\ymf262.cpp">
+      <Filter>Source Files\hardware\sound\mame</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -516,9 +537,6 @@
     <ClInclude Include="..\src\cpu\core_full\support.h">
       <Filter>Source Files\cpu\core_full</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\cpu\core_dyn_x86\cache.h">
-      <Filter>Source Files\cpu\core_dyn_x86</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\cpu\core_dyn_x86\decoder.h">
       <Filter>Source Files\cpu\core_dyn_x86</Filter>
     </ClInclude>
@@ -536,9 +554,6 @@
     </ClInclude>
     <ClInclude Include="..\src\cpu\core_dyn_x86\string.h">
       <Filter>Source Files\cpu\core_dyn_x86</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\cpu\core_dynrec\cache.h">
-      <Filter>Source Files\cpu\core_dynrec</Filter>
     </ClInclude>
     <ClInclude Include="..\src\cpu\core_dynrec\decoder.h">
       <Filter>Source Files\cpu\core_dynrec</Filter>
@@ -573,15 +588,6 @@
     <ClInclude Include="..\src\dos\drives.h">
       <Filter>Source Files\dos\win32headers</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\dos\Ntddcdrm.h">
-      <Filter>Source Files\dos\win32headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\dos\Ntddscsi.h">
-      <Filter>Source Files\dos\win32headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\dos\Ntddstor.h">
-      <Filter>Source Files\dos\win32headers</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\dos\scsidefs.h">
       <Filter>Source Files\dos\win32headers</Filter>
     </ClInclude>
@@ -590,9 +596,6 @@
     </ClInclude>
     <ClInclude Include="..\src\dos\cdrom.h">
       <Filter>Source Files\dos\cdrom</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\hardware\font-switch.h">
-      <Filter>Source Files\hardware</Filter>
     </ClInclude>
     <ClInclude Include="..\src\hardware\serialport\directserial.h">
       <Filter>Source Files\hardware\serialport</Filter>
@@ -699,9 +702,6 @@
     <ClInclude Include="..\include\mixer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\modules.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\mouse.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -743,6 +743,33 @@
     </ClInclude>
     <ClInclude Include="..\include\video.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cpu\dyn_cache.h">
+      <Filter>Source Files\cpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\debug\server.h">
+      <Filter>Source Files\debug\ida_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\debug\server2.h">
+      <Filter>Source Files\debug\ida_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\hardware\mame\emu.h">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\hardware\mame\fmopl.h">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\hardware\mame\saa1099.h">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\hardware\mame\sn76496.h">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\hardware\mame\ymdeltat.h">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\hardware\mame\ymf262.h">
+      <Filter>Source Files\hardware\sound\mame</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

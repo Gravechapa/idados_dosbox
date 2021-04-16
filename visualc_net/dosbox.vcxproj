@@ -14,18 +14,18 @@
     <SccProjectName />
     <SccLocalPath />
     <ProjectGuid>{7FCFFB9B-8629-4D51-849C-8490CECF8AB7}</ProjectGuid>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -75,6 +75,8 @@
       <CompileAs>Default</CompileAs>
       <DisableSpecificWarnings>4244;4018;4005;4731;4800;4996</DisableSpecificWarnings>
       <BufferSecurityCheck>false</BufferSecurityCheck>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;winmm.lib;sdlmain.lib;sdl.lib;pdcurses.lib;ws2_32.lib;dinput8.lib;dxguid.lib;zlibstat.lib;libpng.lib;Iphlpapi.lib;SDL_net.lib;ida.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -124,6 +126,8 @@
       <CompileAs>Default</CompileAs>
       <DisableSpecificWarnings>4244;4018;4005;4731;4800;4996</DisableSpecificWarnings>
       <ForcedIncludeFiles>stdlib.h;malloc.h</ForcedIncludeFiles>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;winmm.lib;sdlmain.lib;sdl.lib;pdcurses.lib;ws2_32.lib;dinput8.lib;dxguid.lib;zlibstat.lib;libpng.lib;Iphlpapi.lib;SDL_net.lib;ida.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -197,6 +201,7 @@
     <ClCompile Include="..\src\dos\drive_fat.cpp" />
     <ClCompile Include="..\src\dos\drive_iso.cpp" />
     <ClCompile Include="..\src\dos\drive_local.cpp" />
+    <ClCompile Include="..\src\dos\drive_overlay.cpp" />
     <ClCompile Include="..\src\dos\drive_virtual.cpp" />
     <ClCompile Include="..\src\fpu\fpu.cpp" />
     <ClCompile Include="..\src\gui\midi.cpp" />
@@ -218,6 +223,11 @@
     <ClCompile Include="..\src\hardware\ipxserver.cpp" />
     <ClCompile Include="..\src\hardware\joystick.cpp" />
     <ClCompile Include="..\src\hardware\keyboard.cpp" />
+    <ClCompile Include="..\src\hardware\mame\fmopl.cpp" />
+    <ClCompile Include="..\src\hardware\mame\saa1099.cpp" />
+    <ClCompile Include="..\src\hardware\mame\sn76496.cpp" />
+    <ClCompile Include="..\src\hardware\mame\ymdeltat.cpp" />
+    <ClCompile Include="..\src\hardware\mame\ymf262.cpp" />
     <ClCompile Include="..\src\hardware\memory.cpp" />
     <ClCompile Include="..\src\hardware\mixer.cpp" />
     <ClCompile Include="..\src\hardware\mpu401.cpp" />
@@ -299,7 +309,6 @@
     <ClInclude Include="..\include\mem.h" />
     <ClInclude Include="..\include\midi.h" />
     <ClInclude Include="..\include\mixer.h" />
-    <ClInclude Include="..\include\modules.h" />
     <ClInclude Include="..\include\mouse.h" />
     <ClInclude Include="..\include\paging.h" />
     <ClInclude Include="..\include\pci_bus.h" />
@@ -314,7 +323,6 @@
     <ClInclude Include="..\include\timer.h" />
     <ClInclude Include="..\include\vga.h" />
     <ClInclude Include="..\include\video.h" />
-    <ClInclude Include="..\src\cpu\core_dynrec\cache.h" />
     <ClInclude Include="..\src\cpu\core_dynrec\decoder.h" />
     <ClInclude Include="..\src\cpu\core_dynrec\decoder_basic.h" />
     <ClInclude Include="..\src\cpu\core_dynrec\decoder_opcodes.h" />
@@ -322,7 +330,6 @@
     <ClInclude Include="..\src\cpu\core_dynrec\operators.h" />
     <ClInclude Include="..\src\cpu\core_dynrec\risc_x64.h" />
     <ClInclude Include="..\src\cpu\core_dynrec\risc_x86.h" />
-    <ClInclude Include="..\src\cpu\core_dyn_x86\cache.h" />
     <ClInclude Include="..\src\cpu\core_dyn_x86\decoder.h" />
     <ClInclude Include="..\src\cpu\core_dyn_x86\dyn_fpu.h" />
     <ClInclude Include="..\src\cpu\core_dyn_x86\dyn_fpu_dh.h" />
@@ -345,17 +352,17 @@
     <ClInclude Include="..\src\cpu\core_normal\string.h" />
     <ClInclude Include="..\src\cpu\core_normal\support.h" />
     <ClInclude Include="..\src\cpu\core_normal\table_ea.h" />
+    <ClInclude Include="..\src\cpu\dyn_cache.h" />
     <ClInclude Include="..\src\cpu\instructions.h" />
     <ClInclude Include="..\src\cpu\lazyflags.h" />
     <ClInclude Include="..\src\cpu\modrm.h" />
     <ClInclude Include="..\src\debug\debug_inc.h" />
     <ClInclude Include="..\src\debug\disasm_tables.h" />
+    <ClInclude Include="..\src\debug\server.h" />
+    <ClInclude Include="..\src\debug\server2.h" />
     <ClInclude Include="..\src\dos\cdrom.h" />
     <ClInclude Include="..\src\dos\dev_con.h" />
     <ClInclude Include="..\src\dos\drives.h" />
-    <ClInclude Include="..\src\dos\Ntddcdrm.h" />
-    <ClInclude Include="..\src\dos\Ntddscsi.h" />
-    <ClInclude Include="..\src\dos\Ntddstor.h" />
     <ClInclude Include="..\src\dos\scsidefs.h" />
     <ClInclude Include="..\src\dos\wnaspi32.h" />
     <ClInclude Include="..\src\fpu\fpu_instructions.h" />
@@ -363,7 +370,12 @@
     <ClInclude Include="..\src\gui\midi_win32.h" />
     <ClInclude Include="..\src\gui\render_scalers.h" />
     <ClInclude Include="..\src\gui\render_templates.h" />
-    <ClInclude Include="..\src\hardware\font-switch.h" />
+    <ClInclude Include="..\src\hardware\mame\emu.h" />
+    <ClInclude Include="..\src\hardware\mame\fmopl.h" />
+    <ClInclude Include="..\src\hardware\mame\saa1099.h" />
+    <ClInclude Include="..\src\hardware\mame\sn76496.h" />
+    <ClInclude Include="..\src\hardware\mame\ymdeltat.h" />
+    <ClInclude Include="..\src\hardware\mame\ymf262.h" />
     <ClInclude Include="..\src\hardware\serialport\directserial.h" />
     <ClInclude Include="..\src\hardware\serialport\libserial.h" />
     <ClInclude Include="..\src\hardware\serialport\misc_util.h" />

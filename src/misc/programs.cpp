@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2015  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -11,9 +11,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
 
@@ -31,6 +31,8 @@
 #include "cross.h"
 #include "control.h"
 #include "shell.h"
+#include "hardware.h"
+#include "mapper.h"
 
 Bitu call_program;
 
@@ -78,7 +80,7 @@ static Bitu PROGRAMS_Handler(void) {
 	HostPt writer=(HostPt)&index;
 	for (;size>0;size--) *writer++=mem_readb(reader++);
 	Program * new_program;
-	if (index > internal_progs.size()) E_Exit("something is messing with the memory");
+	if (index >= internal_progs.size()) E_Exit("something is messing with the memory");
 	PROGRAMS_Main * handler = internal_progs[index];
 	(*handler)(&new_program);
 	new_program->Run();
@@ -138,6 +140,7 @@ void Program::WriteOut(const char * format,...) {
 	va_end(msg);
 
 	Bit16u size = (Bit16u)strlen(buf);
+	dos.internal_output=true;
 	for(Bit16u i = 0; i < size;i++) {
 		Bit8u out;Bit16u s=1;
 		if (buf[i] == 0xA && last_written_character != 0xD) {
@@ -146,6 +149,7 @@ void Program::WriteOut(const char * format,...) {
 		last_written_character = out = buf[i];
 		DOS_WriteFile(STDOUT,&out,&s);
 	}
+	dos.internal_output=false;
 	
 //	DOS_WriteFile(STDOUT,(Bit8u *)buf,&size);
 }
@@ -153,6 +157,7 @@ void Program::WriteOut(const char * format,...) {
 void Program::WriteOut_NoParsing(const char * format) {
 	Bit16u size = (Bit16u)strlen(format);
 	char const* buf = format;
+	dos.internal_output=true;
 	for(Bit16u i = 0; i < size;i++) {
 		Bit8u out;Bit16u s=1;
 		if (buf[i] == 0xA && last_written_character != 0xD) {
@@ -161,6 +166,7 @@ void Program::WriteOut_NoParsing(const char * format) {
 		last_written_character = out = buf[i];
 		DOS_WriteFile(STDOUT,&out,&s);
 	}
+	dos.internal_output=false;
 
 //	DOS_WriteFile(STDOUT,(Bit8u *)format,&size);
 }
@@ -216,9 +222,16 @@ Bitu Program::GetEnvCount(void) {
 }
 
 bool Program::SetEnv(const char * entry,const char * new_string) {
-	PhysPt env_read=PhysMake(psp->GetEnvironment(),0);
-	PhysPt env_write=env_read;
-	char env_string[1024+1];
+	PhysPt env_read = PhysMake(psp->GetEnvironment(),0);
+	
+	//Get size of environment.
+	DOS_MCB mcb(psp->GetEnvironment()-1);
+	Bit16u envsize = mcb.GetSize()*16;
+
+
+	PhysPt env_write = env_read;
+	PhysPt env_write_start = env_read;
+	char env_string[1024+1] = { 0 };
 	do 	{
 		MEM_StrCopy(env_read,env_string,1024);
 		if (!env_string[0]) break;
@@ -231,16 +244,19 @@ bool Program::SetEnv(const char * entry,const char * new_string) {
 	} while (1);
 /* TODO Maybe save the program name sometime. not really needed though */
 	/* Save the new entry */
+
+	//ensure room
+	if (envsize <= (env_write-env_write_start) + strlen(entry) + 1 + strlen(new_string) + 2) return false;
+
 	if (new_string[0]) {
 		std::string bigentry(entry);
 		for (std::string::iterator it = bigentry.begin(); it != bigentry.end(); ++it) *it = toupper(*it);
-		sprintf(env_string,"%s=%s",bigentry.c_str(),new_string); 
-//		sprintf(env_string,"%s=%s",entry,new_string); //oldcode
+		snprintf(env_string,1024+1,"%s=%s",bigentry.c_str(),new_string);
 		MEM_BlockWrite(env_write,env_string,(Bitu)(strlen(env_string)+1));
 		env_write += (PhysPt)(strlen(env_string)+1);
 	}
 	/* Clear out the final piece of the environment */
-	mem_writed(env_write,0);
+	mem_writeb(env_write,0);
 	return true;
 }
 
@@ -279,7 +295,10 @@ private:
 void CONFIG::Run(void) {
 	static const char* const params[] = {
 		"-r", "-wcp", "-wcd", "-wc", "-writeconf", "-l", "-rmconf",
-		"-h", "-help", "-?", "-axclear", "-axadd", "-axtype", "-get", "-set",
+		"-h", "-help", "-?", "-axclear", "-axadd", "-axtype",
+		"-avistart","-avistop",
+		"-startmapper",
+		"-get", "-set",
 		"-writelang", "-wl", "-securemode", "" };
 	enum prs {
 		P_NOMATCH, P_NOPARAMS, // fixed return values for GetParameterFromList
@@ -288,6 +307,8 @@ void CONFIG::Run(void) {
 		P_LISTCONF,	P_KILLCONF,
 		P_HELP, P_HELP2, P_HELP3,
 		P_AUTOEXEC_CLEAR, P_AUTOEXEC_ADD, P_AUTOEXEC_TYPE,
+		P_REC_AVI_START, P_REC_AVI_STOP,
+		P_START_MAPPER,
 		P_GETPROP, P_SETPROP,
 		P_WRITELANG, P_WRITELANG2,
 		P_SECURE
@@ -308,9 +329,6 @@ void CONFIG::Run(void) {
 				restart_params.push_back(control->cmdline->GetFileName());
 				for(size_t i = 0; i < pvars.size(); i++) {
 					restart_params.push_back(pvars[i]);
-					if (pvars[i].find(' ') != std::string::npos) {
-						pvars[i] = "\""+pvars[i]+"\""; // add back spaces
-					}
 				}
 				// the rest on the commandline, too
 				cmd->FillVector(restart_params);
@@ -526,6 +544,16 @@ void CONFIG::Run(void) {
 			WriteOut("\n%s",sec->data.c_str());
 			break;
 		}
+		case P_REC_AVI_START:
+			CAPTURE_VideoStart();
+			break;
+		case P_REC_AVI_STOP:
+			CAPTURE_VideoStop();
+			break;
+		case P_START_MAPPER:
+			if (securemode_check()) return;
+			MAPPER_Run(false);
+			break;
 		case P_GETPROP: {
 			// "section property"
 			// "property"
@@ -705,9 +733,14 @@ void CONFIG::Run(void) {
 			// Input has been parsed (pvar[0]=section, [1]=property, [2]=value)
 			// now execute
 			Section* tsec = control->GetSection(pvars[0]);
-			std::string value;
-			value += pvars[2];
+			std::string value(pvars[2]);
+			//Due to parsing there can be a = at the start of value.
+			while (value.size() && (value.at(0) ==' ' ||value.at(0) =='=') ) value.erase(0,1);
 			for(Bitu i = 3; i < pvars.size(); i++) value += (std::string(" ") + pvars[i]);
+			if (value.empty() ) {
+				WriteOut(MSG_Get("PROGRAM_CONFIG_SET_SYNTAX"));
+				return;
+			}
 			std::string inputline = pvars[1] + "=" + value;
 			
 			tsec->ExecuteDestroy(false);
@@ -784,6 +817,9 @@ void PROGRAMS_Init(Section* /*sec*/) {
 		"-axadd [line] adds a line to the autoexec section.\n"\
 		"-axtype prints the content of the autoexec section.\n"\
 		"-securemode switches to secure mode.\n"\
+		"-avistart starts AVI recording.\n"\
+		"-avistop stops AVI recording.\n"\
+		"-startmapper starts the keymapper.\n"\
 		"-get \"section property\" returns the value of the property.\n"\
 		"-set \"section property=value\" sets the value." );
 	MSG_Add("PROGRAM_CONFIG_HLP_PROPHLP","Purpose of property \"%s\" (contained in section \"%s\"):\n%s\n\nPossible Values: %s\nDefault value: %s\nCurrent value: %s\n");
