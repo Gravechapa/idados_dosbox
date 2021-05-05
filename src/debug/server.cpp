@@ -34,28 +34,6 @@ bool lock_end(void) { return qmutex_unlock(g_mutex); }
 //--------------------------------------------------------------------------
 dbg_rpc_handler_t* g_global_server = NULL;
 
-//--------------------------------------------------------------------------
-// perform an action (func) on all debuggers
-int for_all_debuggers(debmod_visitor_t& v)
-{
-    int code = 0;
-    dispatcher.clients_list->lock();
-    {
-        client_handlers_list_t::storage_t::iterator it;
-        for (it = dispatcher.clients_list->storage.begin();
-            it != dispatcher.clients_list->storage.end();
-            ++it)
-        {
-            dbg_rpc_handler_t* h = (dbg_rpc_handler_t*)it->first;
-            code = v.visit(h->get_debugger_instance());
-            if (code != 0)
-                break;
-        }
-    }
-    dispatcher.clients_list->unlock();
-    return code;
-}
-
 //-------------------------------------------------------------------------
 dbgsrv_dispatcher_t::dbgsrv_dispatcher_t(bool multi_threaded)
     : base_dispatcher_t(multi_threaded),
@@ -105,6 +83,16 @@ int idados_init()
     return 1;
 }
 
+bool DEBUG_RemoteDataReady(void) //FIXME need to rework this.
+{
+    if (g_global_server)
+    {
+        return irs_ready(g_global_server->irs, 1); //wait 1 millisecond.
+    }
+
+    return false;
+}
+
 void idados_term()
 {
     dispatcher.shutdown_gracefully(0);
@@ -113,27 +101,6 @@ void idados_term()
         server_thread->join();
     }
 }
-
-/*int idados_handle_command()
-{
-    if (g_global_server == NULL)
-    {
-        //dispatcher.dispatch();
-        return 0;
-    }
-    
-    dosbox_debmod_t *dm = (dosbox_debmod_t *)g_global_server->get_debugger_instance();
-
-    dm->dosbox_step_ret = 0;
-    bytevec_t empty;
-    rpc_packet_t *packet = g_global_server->send_request_and_receive_reply(empty); // FIXME: "must_login" argument?
-    if (packet != NULL)
-    {
-        qfree(packet);
-    }
-
-    return dm->dosbox_step_ret;
-}*/
 
 void idados_stopped()
 {

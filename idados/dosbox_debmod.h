@@ -98,9 +98,6 @@ public:
     virtual HANDLE get_thread_handle(thid_t tid) override;
     virtual int idaapi dbg_is_ok_bpt(bpttype_t type, ea_t ea, int len) override;
 
-    bool idaapi close_remote();
-    bool idaapi open_remote(const char * /*hostname*/, int port_number, const char * /*password*/);
-
     bool hit_breakpoint(PhysPt addr);
 };
 

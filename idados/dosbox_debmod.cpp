@@ -1,6 +1,3 @@
-/*
-
-*/
 #include "dosbox_debmod.h"
 #include <ida.hpp>
 #include <err.h>
@@ -53,22 +50,6 @@ dosbox_debmod_t::dosbox_debmod_t()
 //--------------------------------------------------------------------------
 dosbox_debmod_t::~dosbox_debmod_t()
 {
-}
-
-//--------------------------------------------------------------------------
-bool idaapi dosbox_debmod_t::close_remote()
-{
-//  trk.term();
-    return true;
-}
-
-//--------------------------------------------------------------------------
-bool idaapi dosbox_debmod_t::open_remote(const char * /*hostname*/, int port_number, const char * /*password*/)
-{
- // if ( trk.init(port_number) )
-    return true;
- // warning("Could not open serial port: %s", winerr(GetLastError()));
- // return false;
 }
 
 //--------------------------------------------------------------------------
@@ -129,12 +110,10 @@ int idaapi dosbox_debmod_t::dbg_del_bpt(bpttype_t /*type*/, ea_t ea, const uchar
     }
     if (--p->second.cnt == 0)
     {
-    int bid = p->second.bid;
-    bpts.erase(p);
+        int bid = p->second.bid;
+        bpts.erase(p);
 
-//  if ( !trk.del_bpt(bid) )
-//      return 0; // failed? odd
-    DEBUG_DelBreakPoint((PhysPt)ea);
+        DEBUG_DelBreakPoint((PhysPt)ea);
     }
     return 1; // ok
 }
@@ -155,50 +134,8 @@ drc_t idaapi dosbox_debmod_t::dbg_init(uint32_t* flags2, qstring* /*errbuf*/)
 //--------------------------------------------------------------------------
 void idaapi dosbox_debmod_t::dbg_term()
 {
-    //trk.disconnect();
-    return; //trk.term();
+    return;
 }
-
-//--------------------------------------------------------------------------
-// input is valid only if n==0
-//int idaapi dosbox_debmod_t::dbg_process_get_info(int n, const char * /*input*/, process_info_t *info)
-//{
-//  if ( n == 0 ) // initialize the list
-//  {
-//
-////    if ( !trk.get_process_list(proclist) )
-//      return 0;
-//
-//
-//#if 0 // commented out because we can not match file names with process names
-//    if ( input != NULL )
-//    { // remove all unmatching processes from the list
-//      qstring inpbuf;
-//      input = qbasename(input);
-//      const char *end = strchr(input, '.');
-//      if ( end != NULL )
-//      { // ignore everything after '.' (remove extension)
-//        inpbuf = qstring(input, end-input);
-//        input = inpbuf.c_str();
-//      }
-//      for ( int i=proclist.size()-1; i >= 0; i-- )
-//        if ( strstr(proclist[i].name.c_str(), input) == NULL )
-//          proclist.erase(proclist.begin()+i);
-//    }
-//#endif
-//  }
-///*
-//  if ( n >= proclist.size() )
-//    return 0;
-//  if ( info != NULL )
-//  {
-//    proclist_entry_t &pe = proclist[n];
-//    info->pid = pe.pid;
-//    qstrncpy(info->name, pe.name.c_str(), sizeof(info->name));
-//  }
-//*/
-//  return 1;
-//}
 
 drc_t idaapi dosbox_debmod_t::dbg_get_processes(procinfo_vec_t* info, qstring* /*errbuf*/)
 {
@@ -254,7 +191,7 @@ void dosbox_debmod_t::create_process_start_event(const char *path)
 const exception_info_t *dosbox_debmod_t::find_exception_by_desc(const char *desc) const
 {
     qvector<exception_info_t>::const_iterator p;
-    for (p=exceptions.begin(); p != exceptions.end(); ++p)
+    for (p = exceptions.begin(); p != exceptions.end(); ++p)
     {
         const char *tpl = p->desc.c_str();
         size_t len = p->desc.length();
@@ -269,157 +206,6 @@ const exception_info_t *dosbox_debmod_t::find_exception_by_desc(const char *desc
     }
     return NULL;
 }
-
-
-//--------------------------------------------------------------------------
-/*
-bool metrotrk_t::handle_notification(uchar seq, void *ud) // plugin version
-{
-  dosbox_debmod_t &dm = *(dosbox_debmod_t *)ud;
-  int i = 0;
-  bool suspend = true;
-  debug_event_t ev;
-
-  uchar type = extract_byte(i);
-  switch ( type )
-  {
-    case TrkOSNotifyCreated:
-      {
-        image_info_t ii;
-        uint16 item = extract_int16(i);
-        QASSERT(item == TrkOSDLLItem);
-        qnotused(item);
-        ii.pid       = extract_int32(i);
-        ii.tid       = extract_int32(i);
-        ii.codeaddr  = extract_int32(i);
-        ii.dataaddr  = extract_int32(i);
-        ii.name      = extract_pstr(i);
-        ev.eid = LIBRARY_LOAD;
-        ev.pid = ii.pid;
-        ev.tid = ii.tid;
-        ev.ea = BADADDR;
-        ev.handled = false;
-        qstrncpy(ev.modinfo.name, ii.name.c_str(), sizeof(ev.modinfo.name));
-        ev.modinfo.base = ii.codeaddr;
-        ev.modinfo.size = 0;
-        ev.modinfo.rebase_to = BADADDR;
-        dm.add_dll(ii);
-      }
-      break;
-
-    case TrkOSNotifyDeleted:
-      {
-        uint16 item = extract_int16(i);
-        if ( debug_debugger )
-          msg("NotifyDeleted Item: %s\n", get_os_item_name(item));
-        switch ( item )
-        {
-          case TrkOSProcessItem:
-            {
-              uint32 exitcode = extract_int32(i);
-              uint32 pid      = extract_int32(i);
-              ev.eid = PROCESS_EXIT;
-              ev.pid = pid;
-              ev.tid = -1;
-              ev.ea = BADADDR;
-              ev.handled = false;
-              ev.exit_code = exitcode;
-              tpi.pid = -1;
-              dm.exited = true;
-            }
-            break;
-          case TrkOSDLLItem:
-            {
-              int32 pid = extract_int32(i);
-              int32 tid = extract_int32(i);
-              qstring name = extract_pstr(i);
-              ev.eid = LIBRARY_UNLOAD;
-              ev.pid = pid;
-              ev.tid = tid;
-              ev.ea = BADADDR;
-              ev.handled = false;
-              qstrncpy(ev.info, name.c_str(), sizeof(ev.info));
-              dm.del_dll(name.c_str());
-            }
-            break;
-          default:
-            INTERR(); // not implemented
-        }
-      }
-      break;
-
-    case TrkNotifyStopped:
-      {
-        ev.ea  = extract_int32(i);
-        ev.pid = extract_int32(i);
-        ev.tid = extract_int32(i);
-        qstring desc = extract_pstr(i);
-        if ( debug_debugger )
-        {
-          msg("  Current PC: %08X\n", ev.ea);
-          msg("  Process ID: %08X\n", ev.pid);
-          msg("  Thread ID : %08X\n", ev.tid);
-          msg("  Name      : %s\n", desc.c_str());
-        }
-        ev.handled = false;
-        // there are various reasons why the app may stop
-        if ( desc.empty() ) // bpt
-        {
-          // bpt exists?
-          if ( dm.bpts.find(ev.ea) != dm.bpts.end() )
-          {
-            ev.eid = BREAKPOINT;
-            ev.bpt.hea = BADADDR;
-            ev.bpt.kea = BADADDR;
-          }
-          else // no, this must be a single step
-          {
-            ev.eid = STEP;
-          }
-          break;
-        }
-        // an exception
-        ev.eid = EXCEPTION;
-        ev.exc.ea = BADADDR;
-        qstrncpy(ev.exc.info, desc.c_str(), sizeof(ev.exc.info));
-        // trk returns the exception description, but no code.
-        // convert the description to the code
-        const exception_info_t *ei = dm.find_exception_by_desc(desc.c_str());
-        if ( ei != NULL )
-        {
-          int code = ei->code;
-          ev.exc.code = code;
-          ev.exc.can_cont = code != 20        // abort
-                         && code != 21        // kill
-                         && code < 25;        // regular exception
-          ev.handled = ei->handle();
-          suspend = ei->break_on();
-        }
-        else
-        {
-          ev.exc.code = 25; // just something
-          ev.exc.can_cont = true;
-        }
-      }
-      break;
-
-    default:
-      // unexpected packet?!
-//      msg("Unexpected packet %d\n", type);
-      return false;
-  }
-  // send reply
-  if ( !dm.exited )
-    send_reply_ok(seq);
-  if ( !suspend )
-    dm.dbg_continue_after_event(&ev);
-  else
-    dm.events.enqueue(ev, IN_BACK);
-
-  return true;
-}
-*/
-
 
 //--------------------------------------------------------------------------
 gdecode_t idaapi dosbox_debmod_t::dbg_get_debug_event(debug_event_t *event, int timeout_ms)
@@ -437,8 +223,6 @@ gdecode_t idaapi dosbox_debmod_t::dbg_get_debug_event(debug_event_t *event, int 
             debdeb("GDE: %s\n", debug_event_str(event));
             return GDE_ONE_EVENT;
         }
-        // no pending events, check the target
-        //    trk.poll_for_event(ida_is_idle ? TIMEOUT : 0);
         if (events.empty())
         {
             break;
@@ -451,46 +235,6 @@ gdecode_t idaapi dosbox_debmod_t::dbg_get_debug_event(debug_event_t *event, int 
 //--------------------------------------------------------------------------
 drc_t idaapi dosbox_debmod_t::dbg_attach_process(pid_t pid, int /*event_id*/, int /*flags*/, qstring* /*errbuf*/)
 {
-/*
-  if ( !trk.attach_process(pid) )
-    return 0;
-
-  // get information on the existing threads
-  thread_list_t tlist;
-  trk.get_thread_list(pid, tlist);
-  if ( tlist.empty() )
-  {
-    trk.disconnect();
-    return 0;       // something is wrong
-  }
-
-  pi.pid = pid;
-  pi.tid = tlist[0].tid;
-  pi.codeaddr = (uint32)BADADDR; // unknown :(
-  pi.dataaddr = (uint32)BADADDR;
-  trk.tpi = pi;
-  create_process_start_event(tlist[0].name.c_str());
-  // create fake PROCESS_ATTACH/THREAD_START event for each thread
-  for ( ssize_t i=tlist.size()-1; i >= 0; i-- )
-  {
-    debug_event_t ev;
-    ev.eid = THREAD_START;
-    ev.pid = pid;
-    ev.tid = tlist[i].tid;
-    ev.ea = BADADDR;
-    ev.handled = false;
-    if ( i == 0 )
-    {
-      ev.eid = PROCESS_ATTACH;
-      qstrncpy(ev.modinfo.name, tlist[i].name.c_str(), sizeof(ev.modinfo.name));
-      process_name = ev.modinfo.name;
-      ev.modinfo.base = BADADDR; // unknown :(
-      ev.modinfo.size = 0;
-      ev.modinfo.rebase_to = BADADDR;
-    }
-    events.enqueue(ev, IN_BACK);
-  }
-*/
   return DRC_OK;
 }
 
@@ -516,14 +260,12 @@ drc_t idaapi dosbox_debmod_t::dbg_prepare_to_pause_process(qstring* /*errbuf*/)
 
     idados_stopped();
 
-    return DRC_OK; //trk.suspend_thread(pi.pid, pi.tid);
+    return DRC_OK;
 }
 
 //--------------------------------------------------------------------------
 drc_t idaapi dosbox_debmod_t::dbg_exit_process(qstring* /*errbuf*/)
 {
-//  if ( trk.current_pid() == -1 )
-//    return true; // already terminated
     debug_event_t ev;
 
     ev.set_exit_code(PROCESS_EXITED, 0);
@@ -535,7 +277,7 @@ drc_t idaapi dosbox_debmod_t::dbg_exit_process(qstring* /*errbuf*/)
     events.enqueue(ev, IN_BACK);
   
   
-    return DRC_OK; //trk.terminate_process(pi.pid);
+    return DRC_OK;
 }
 
 //--------------------------------------------------------------------------
@@ -561,23 +303,8 @@ drc_t idaapi dosbox_debmod_t::dbg_continue_after_event(const debug_event_t *even
         return DRC_OK;
     }
 
-/*  
-    // was single stepping asked?
-    stepping_t::iterator p = stepping.find(event->tid);
-    if ( p != stepping.end() )
-    {
-    stepping.erase(p);
-    ea_t end = event->ea + 0;//get_item_size(event->ea);
-    printf("stepping.\n");
-    return 1; //trk.step_thread(event->pid, event->tid, (int32)event->ea, (int32)end, true);
-    }
-    //int tid = event->tid == -1 ? pi.tid : event->tid;
-*/
-
-  
-    //DEBUG_Continue();
     idados_running();
-    return DRC_OK; //trk.resume_thread(event->pid, tid);
+    return DRC_OK;
 }
 
 //--------------------------------------------------------------------------
@@ -586,29 +313,18 @@ void idaapi dosbox_debmod_t::dbg_stopped_at_debug_event(
     bool dlls_added,
     thread_name_vec_t* thr_names)
 {
-  // we will take advantage of this event to import information
-  // about the exported functions from the loaded dlls
-/*
-  clear_debug_names();
-
-  for ( easet_t::iterator p=dlls_to_import.begin(); p != dlls_to_import.end(); )
-  {
-    import_dll_to_database(*p);
-    dlls_to_import.erase(p++);
-  }
-*/
 }
 
 //--------------------------------------------------------------------------
 drc_t idaapi dosbox_debmod_t::dbg_thread_suspend(thid_t tid)
 {
-    return DRC_OK; //trk.suspend_thread(pi.pid, tid);
+    return DRC_OK;
 }
 
 //--------------------------------------------------------------------------
 drc_t idaapi dosbox_debmod_t::dbg_thread_continue(thid_t tid)
 {
-    return DRC_OK; //trk.resume_thread(pi.pid, tid);
+    return DRC_OK;
 }
 
 //--------------------------------------------------------------------------
@@ -641,13 +357,6 @@ drc_t idaapi dosbox_debmod_t::dbg_read_registers(
     regval_t* values,
     qstring* /*errbuf*/)
 {
-//  uint32 rvals[17];
-//  QASSERT(n > 0 && n <= qnumber(rvals));
-
-//  memset(values, 0, n * sizeof(regval_t)); // force null bytes at the end of floating point registers.
-                                               // we need this to properly detect register modifications,
-                                               // as we compare the whole regval_t structure !
-
     if ((clsmask & X86_RC_GENERAL) != 0) 
     {
         values[R_EAX   ].ival = (uint64)reg_eax;
@@ -693,29 +402,6 @@ drc_t idaapi dosbox_debmod_t::dbg_read_registers(
     printf("FS = %08x",(uint64)values[R_FS    ].ival);
     printf(" GS = %08x\n",(uint64)values[R_GS    ].ival);
 
-/*
-  if ( exited || !trk.read_regs(pi.pid, tid, 0, n, rvals) )
-    return 0;
-
-  for ( int i=0; i < n; i++ )
-  {
-    debdeb("%cR%d: %08X", i==8 ? '\n' : ' ', i, rvals[i]);
-    values[i].ival = rvals[i];
-  }
-  debdeb("\n");
-
-  // if we read the PC and PSW values, check that our virtual register T
-  // and real PSW at that address are the same. If not, copy real T to our
-  // virtual register T
-  if ( n == qnumber(rvals) ) // PC and PSW are read?
-  {
-    ea_t pc = rvals[15];
-    int real_t = (rvals[16] & 0x20) != 0;
-    int virt_t = getSR(pc, T) != 0;
-    if ( real_t != virt_t )
-      splitSRarea1(pc, T, real_t, SR_autostart);
-  }
-*/
     return DRC_OK;
 }
 
@@ -753,7 +439,7 @@ drc_t idaapi dosbox_debmod_t::dbg_write_register(
         default : break;
     }
 
-    return DRC_OK;//trk.write_regs(pi.pid, tid, reg_idx, 1, &v);
+    return DRC_OK;
 }
 
 //--------------------------------------------------------------------------
@@ -938,8 +624,7 @@ ssize_t idaapi dosbox_debmod_t::dbg_read_memory(ea_t ea, void *buffer, size_t si
     uchar *buf;
  
     buf = (uchar*)buffer;
-    //addr = addr + r_debug.base;
- 
+
     for(i = 0; i < size; ++i)
     {
         buf[i] = mem_readb(addr);
@@ -970,65 +655,24 @@ ssize_t idaapi dosbox_debmod_t::dbg_write_memory(ea_t ea, const void *buffer, si
 //--------------------------------------------------------------------------
 int  idaapi dosbox_debmod_t::dbg_open_file(const char *file, uint64 *fsize, bool readonly)
 {
-/*
-  if ( fsize != NULL )
-    *fsize = 0;
-  int h = trk.open_file(file, readonly ? TrkFileOpenRead : TrkFileOpenCreate);
-  if ( h > 0 )
-  {
-    if ( readonly && fsize != NULL )
-    {
-      // problem: trk does not have the ftell call
-      // we will have to find the file size using the binary search
-      // it seems the read_file() doesn't work at all!
-      size_t size = 0x100000; // assume big file
-      size_t delta = size;
-      while ( (delta>>=1) > 0 )
-      {
-        uchar dummy;
-        if ( dbg_read_file(h, uint32(size-1), &dummy, 1) == 1 )
-          size += delta;
-        else
-          size -= delta;
-      }
-      *fsize = uint32(size - 1);
-    }
-  }
-  else
-  {
-    qerrno = eOS;
-    // fixme: set errno
-  }
-  return h;
-*/
     return 0;
 }
 
 //--------------------------------------------------------------------------
 void idaapi dosbox_debmod_t::dbg_close_file(int fn)
 {
-  //trk.close_file(fn, 0);
+
 }
 
 //--------------------------------------------------------------------------
 ssize_t idaapi dosbox_debmod_t::dbg_read_file(int fn, qoff64_t off, void *buf, size_t size)
 {
-/*
-  if ( !trk.seek_file(fn, off, SEEK_SET) )
-    return -1;
-  return trk.read_file(fn, buf, size);
-*/
     return -1;
 }
 
 //--------------------------------------------------------------------------
 ssize_t idaapi dosbox_debmod_t::dbg_write_file(int fn, qoff64_t off, const void *buf, size_t size)
 {
-/*
-  if ( !trk.seek_file(fn, off, SEEK_SET) )
-    return -1;
-  return trk.write_file(fn, buf, size);
-*/
     return -1; 
 }
 
@@ -1079,18 +723,12 @@ debmod_t *create_debug_session(void*)
 //--------------------------------------------------------------------------
 bool term_subsystem()
 {
-//  tdb_term();
-//  qmutex_free(g_mutex);
     return true;
 }
 
 //--------------------------------------------------------------------------
 bool init_subsystem()
 {
-//  if ((g_mutex = qmutex_create()) == NULL)
-//    return false;
-
-//  tdb_init();
     return true;
 }
 
@@ -1107,17 +745,6 @@ bool dosbox_debmod_t::hit_breakpoint(PhysPt addr)
     ev_bpt.kea = BADADDR;//(ea_t)reg_eip;
     ev.ea = addr;
     ev.handled = false;
-
-/*
-  ev.eid = NO_EVENT;
-  ev.pid = NO_PROCESS;
-  ev.tid = NO_PROCESS;
-  ev.ea = addr;
-  ev.handled = true;
-  ev.exc.code = 0;
-  ev.exc.can_cont = true;
-  ev.exc.ea = BADADDR;
-*/
 
     events.enqueue(ev, IN_BACK);
 
@@ -1146,5 +773,3 @@ inline ea_t find_app_base()
 
     return base;
 }
-
-

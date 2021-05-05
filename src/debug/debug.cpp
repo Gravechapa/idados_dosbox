@@ -83,7 +83,6 @@ bool DEBUG_AddBreakPoint(Bit32u address, bool once);
 bool DEBUG_AddMemBreakPoint(Bit32u address);
 bool DEBUG_DelBreakPoint(PhysPt address);
 int DEBUG_Continue();
-int DEBUG_ContinueWithoutDebug();
 string DEBUG_GetFileName();
 #endif
 
@@ -1901,9 +1900,6 @@ Bitu DEBUG_Loop(void) {
 	idados_sync->release();
 	idados_sync->acquire();
 
-	//idados ret = DEBUG_RemoteHandleCMD();
-	//ret = idados_handle_command();
-
 	if (dosbox_step_ret < 0) return dosbox_step_ret;
 	if (dosbox_step_ret > 0) {
 		printf("CS:IP = %x\n", GetAddress(SegValue(cs), (unsigned long)reg_eip));
@@ -2732,7 +2728,6 @@ void DEBUG_RemoteStep()
 {
 	idados_sync->acquire();
 
-	//idados r_debug.app_continue = false;
 	idados_stopped();
 
 	exitLoop = false;
@@ -2748,16 +2743,6 @@ int DEBUG_Continue()
 	debugging = false;
 
 	return DEBUG_Run(1, false);
-}
-
-int DEBUG_ContinueWithoutDebug()
-{
-	CBreakpoint::DeleteAll();
-	CDebugVar::DeleteAll();
-	debugging = false;
-	DOSBOX_SetNormalLoop();
-
-	return 1;
 }
 
 string DEBUG_GetFileName()

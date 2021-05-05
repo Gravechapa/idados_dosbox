@@ -130,7 +130,7 @@ Bit32u ticksScheduled;
 bool ticksLocked;
 void increaseticks();
 
-#ifdef C_DEBUG
+#ifdef C_IDA_DEBUG
 bool DEBUG_RemoteDataReady(void);
 Bitu DEBUG_EnableDebugger(void);
 #endif
