@@ -431,27 +431,6 @@
     <ClCompile Include="..\src\debug\server.cpp">
       <Filter>Source Files\debug\ida_server</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\debugger\debmod.cpp">
-      <Filter>Source Files\ida_debugger_plugin</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\debugger\pc_debmod.cpp">
-      <Filter>Source Files\ida_debugger_plugin</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\debugger\rpc_engine.cpp">
-      <Filter>Source Files\ida_debugger_plugin</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\debugger\rpc_hlp.cpp">
-      <Filter>Source Files\ida_debugger_plugin</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\debugger\rpc_server.cpp">
-      <Filter>Source Files\ida_debugger_plugin</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\debugger\tcpip.cpp">
-      <Filter>Source Files\ida_debugger_plugin</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\debugger\util.cpp">
-      <Filter>Source Files\ida_debugger_plugin</Filter>
-    </ClCompile>
     <ClCompile Include="..\idados\dosbox_debmod.cpp">
       <Filter>Source Files\idados</Filter>
     </ClCompile>
@@ -472,6 +451,27 @@
     </ClCompile>
     <ClCompile Include="..\src\hardware\mame\ymf262.cpp">
       <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\dbg\dbg_rpc_engine.cpp">
+      <Filter>Source Files\ida_debugger_plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\dbg\dbg_rpc_hlp.cpp">
+      <Filter>Source Files\ida_debugger_plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\dbg\debmod.cpp">
+      <Filter>Source Files\ida_debugger_plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\dbg\pc_debmod.cpp">
+      <Filter>Source Files\ida_debugger_plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\dbg\pc_regs.cpp">
+      <Filter>Source Files\ida_debugger_plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\dbg\bin_search.cpp">
+      <Filter>Source Files\ida_debugger_plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\debug\dbg_rpc_handler_fix.cpp">
+      <Filter>Source Files\debug\ida_server</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -748,9 +748,6 @@
       <Filter>Source Files\cpu</Filter>
     </ClInclude>
     <ClInclude Include="..\src\debug\server.h">
-      <Filter>Source Files\debug\ida_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\debug\server2.h">
       <Filter>Source Files\debug\ida_server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\hardware\mame\emu.h">

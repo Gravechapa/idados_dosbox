@@ -51,7 +51,7 @@ using namespace std;
 #include "setup.h"
 
 #ifdef C_IDA_DEBUG
-#include "server2.h" //ida interface functions.
+#include "server.h" //ida interface functions.
 #endif
 
 #ifdef WIN32
@@ -78,11 +78,11 @@ static void OutputVecTable(char* filename);
 static void DrawVariables(void);
 
 #ifdef C_IDA_DEBUG
-Bits DEBUG_RemoteStep(void);
+void DEBUG_RemoteStep();
 bool DEBUG_AddBreakPoint(Bit32u address, bool once);
 bool DEBUG_AddMemBreakPoint(Bit32u address);
 bool DEBUG_DelBreakPoint(PhysPt address);
-int DEBUG_Continue(void);
+int DEBUG_Continue();
 int DEBUG_ContinueWithoutDebug();
 string DEBUG_GetFileName();
 #endif
@@ -116,6 +116,7 @@ bool	exitLoop	= false;
 
 #ifdef C_IDA_DEBUG
 static string debug_filename;
+int dosbox_step_ret = 0;
 #endif
 
 // Heavy Debugging Vars for logging
@@ -1896,19 +1897,21 @@ Bitu DEBUG_Loop(void) {
 #ifndef C_IDA_DEBUG
 	return DEBUG_CheckKeys();
 #else
-	Bits ret;
+	dosbox_step_ret = 0;
+	idados_sync->release();
+	idados_sync->acquire();
 
 	//idados ret = DEBUG_RemoteHandleCMD();
-	ret = idados_handle_command();
+	//ret = idados_handle_command();
 
-	if (ret < 0) return ret;
-	if (ret > 0) {
+	if (dosbox_step_ret < 0) return dosbox_step_ret;
+	if (dosbox_step_ret > 0) {
 		printf("CS:IP = %x\n", GetAddress(SegValue(cs), (unsigned long)reg_eip));
-		ret = (*CallBack_Handlers[ret])();
-		if (ret) {
+		dosbox_step_ret = (*CallBack_Handlers[dosbox_step_ret])();
+		if (dosbox_step_ret) {
 			exitLoop = true;
 			CPU_Cycles = CPU_CycleLeft = 0;
-			return ret;
+			return dosbox_step_ret;
 		}
 	}
 	if (idados_is_running())
@@ -2702,41 +2705,44 @@ bool DEBUG_HeavyIsBreakpoint(void) {
 #ifdef C_IDA_DEBUG
 bool DEBUG_AddBreakPoint(Bit32u address, bool once)
 {
+	idados_sync->acquire();
 	CBreakpoint::AddBreakpoint((Bit16u)(address / 0x10), (Bit32u)address % 0x10, once);
-
+	idados_sync->release();
 	return true;
 }
 
 bool DEBUG_AddMemBreakPoint(Bit32u address)
 {
+	idados_sync->acquire();
 	CBreakpoint::AddMemBreakpoint((Bit16u)(address / 0x10), (Bit32u)address % 0x10);
-
+	idados_sync->release();
 	return true;
 }
 
 bool DEBUG_DelBreakPoint(PhysPt address)
 {
+	idados_sync->acquire();
 	printf("delete breakpoint at %x\n", address);
 	CBreakpoint::DeleteBreakpoint((Bit16u)(address >> 4), (Bit32u)address % 0x10);
-
+	idados_sync->release();
 	return true;
 }
 
-Bits DEBUG_RemoteStep(void)
+void DEBUG_RemoteStep()
 {
-	Bits ret;
+	idados_sync->acquire();
 
 	//idados r_debug.app_continue = false;
 	idados_stopped();
 
 	exitLoop = false;
-	ret = DEBUG_Run(1, true);
+	dosbox_step_ret = DEBUG_Run(1, true);
 
 	printf("Stepping. New CS:IP = %x\n", GetAddress(SegValue(cs), (unsigned long)reg_eip));
-	return ret;
+	idados_sync->release();
 }
 
-int DEBUG_Continue(void)
+int DEBUG_Continue()
 {
 	// Run Programm
 	debugging = false;
@@ -2757,11 +2763,6 @@ int DEBUG_ContinueWithoutDebug()
 string DEBUG_GetFileName()
 {
 	return debug_filename;
-}
-
-void DEBUG_AppTerminated()
-{
-	//idados remote_process_terminated();
 }
 
 #endif

@@ -9,25 +9,23 @@ char wanted_name[] = "Remote DOSBox debugger";
 #define DEBUGGER_FLAGS DBG_FLAG_REMOTE | DBG_FLAG_USE_SREGS
 #define DEBUGGER_RESMOD (DBG_RESMOD_STEP_INTO)
 
-//#define HAVE_APPCALL
-
-//////
-#include "tcpip.h"
-#include <ua.hpp>
-#include <area.hpp>
-#include <idd.hpp>
-#include <loader.hpp>
-#include <ida.hpp>
+#include <pro.h>
 #include <idp.hpp>
+#include <idd.hpp>
+#include <ua.hpp>
+#include <range.hpp>
+#include <loader.hpp>
 #include <kernwin.hpp>
-#include "rpc_client.h"
+#include <network.hpp>
+
+#include "dbg_rpc_client.h"
 #include "rpc_debmod_dosbox.h"
 
 rpc_debmod_dosbox_t g_dbgmod;
 #include "common_stub_impl.cpp"
 
-#define S_MAP_ADDRESS s_map_address
+#define HAVE_MAP_ADDRESS
 
 #include "pc_local_impl.cpp"
 #include "dosbox_local_impl.cpp"
-#include "common_local_impl_fixed.cpp"
+#include "common_local_impl.cpp"

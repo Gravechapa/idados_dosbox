@@ -15,28 +15,28 @@
     <ClCompile Include="rpc_debmod_dosbox.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\debugger\debmod.cpp">
+    <ClCompile Include="..\..\..\dbg\dbg_rpc_client.cpp">
       <Filter>ida_debugger_plugin</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\debugger\pc_debmod.cpp">
+    <ClCompile Include="..\..\..\dbg\dbg_rpc_engine.cpp">
       <Filter>ida_debugger_plugin</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\debugger\rpc_client.cpp">
+    <ClCompile Include="..\..\..\dbg\dbg_rpc_hlp.cpp">
       <Filter>ida_debugger_plugin</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\debugger\rpc_debmod.cpp">
+    <ClCompile Include="..\..\..\dbg\pc_debmod.cpp">
       <Filter>ida_debugger_plugin</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\debugger\rpc_engine.cpp">
+    <ClCompile Include="..\..\..\dbg\rpc_debmod.cpp">
       <Filter>ida_debugger_plugin</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\debugger\rpc_hlp.cpp">
+    <ClCompile Include="..\..\..\dbg\debmod.cpp">
       <Filter>ida_debugger_plugin</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\debugger\tcpip.cpp">
+    <ClCompile Include="..\..\..\dbg\bin_search.cpp">
       <Filter>ida_debugger_plugin</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\debugger\util.cpp">
+    <ClCompile Include="..\..\..\dbg\pc_regs.cpp">
       <Filter>ida_debugger_plugin</Filter>
     </ClCompile>
   </ItemGroup>

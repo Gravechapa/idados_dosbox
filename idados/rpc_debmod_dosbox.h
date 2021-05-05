@@ -1,3 +1,4 @@
+#pragma once
 #include <idd.hpp>
 #include "rpc_debmod.h"
 

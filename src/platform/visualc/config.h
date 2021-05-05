@@ -7,9 +7,9 @@
 #define C_DDRAW 1 
 
 /* Define to 1 to enable screenshots, requires libpng */
-#define C_SSHOT 1
+#define C_SSHOT 0
 /* Define to 1 to enable movie recording, requires zlib built without Z_SOLO */
-#define C_SRECORD 1
+#define C_SRECORD 0
 
 /* Define to 1 to use opengl display output support */
 #define C_OPENGL 1
