@@ -10,9 +10,6 @@
 #include "dosbox.h"
 #include "cpu.h"
 
-
-inline ea_t find_app_base();
-
 //defined in debug.cpp
 Bit32u GetAddress(Bit16u seg, Bit32u offset);
 bool DEBUG_AddBreakPoint(Bit32u address, bool once);
@@ -23,6 +20,8 @@ void DEBUG_RemoteStep();
 //server.cpp
 void idados_running();
 void idados_stopped();
+void idados_sync();
+void idados_sync_request();
 
 extern debugger_t debugger;
 bool debug_debugger;
@@ -31,9 +30,6 @@ bool debug_debugger;
 // Initialize static members
 // TODO: Can we support this?
 bool dosbox_debmod_t::reuse_broken_connections = false;
-
-
-static const int T = 20;
 
 //--------------------------------------------------------------------------
 #ifdef _MSC_VER
@@ -81,8 +77,7 @@ int idaapi dosbox_debmod_t::dbg_add_bpt(
     }
 
     printf("new breakpoint at 0x%x.\n", ea);
- 
-    //ea += r_debug.base;
+    idados_sync_request(); //->
     switch(type)
     {
         case BPT_EXEC :
@@ -91,9 +86,10 @@ int idaapi dosbox_debmod_t::dbg_add_bpt(
         case BPT_WRITE : DEBUG_AddMemBreakPoint((Bit32u)ea); break;
         case BPT_READ :
             // Unsupported
+            idados_sync(); //<-
             return 0; // failed
     }
-
+    idados_sync(); //<-
     bpts.insert(std::make_pair(ea, bpt_info_t(1, 1)));
 
     return 1; // ok
@@ -113,7 +109,11 @@ int idaapi dosbox_debmod_t::dbg_del_bpt(bpttype_t /*type*/, ea_t ea, const uchar
         int bid = p->second.bid;
         bpts.erase(p);
 
+        idados_sync_request(); //->
+
         DEBUG_DelBreakPoint((PhysPt)ea);
+
+        idados_sync(); // <-
     }
     return 1; // ok
 }
@@ -149,6 +149,29 @@ drc_t idaapi dosbox_debmod_t::dbg_detach_process()
 }
 
 //--------------------------------------------------------------------------
+inline ea_t find_app_base()
+{
+    ea_t base = (ea_t)GetAddress(SegValue(cs), 0);
+    ea_t addr;
+
+    addr = (ea_t)GetAddress(SegValue(ds), 0);
+
+    if (addr < base)
+    {
+        base = addr;
+    }
+
+    addr = (ea_t)GetAddress(SegValue(ss), 0);
+
+    if (addr < base)
+    {
+        base = addr;
+    }
+
+    return base;
+}
+
+//--------------------------------------------------------------------------
 drc_t idaapi dosbox_debmod_t::dbg_start_process(
   const char *path,
   const char *args,
@@ -158,6 +181,7 @@ drc_t idaapi dosbox_debmod_t::dbg_start_process(
   uint32 /* input_file_crc32 */,
   qstring* /*errbuf*/)
 {
+    idados_sync_request(); //->
 
     entry_point = (ea_t)GetAddress(SegValue(cs), reg_eip);
     printf("entry_point = %x\n", entry_point);
@@ -165,6 +189,9 @@ drc_t idaapi dosbox_debmod_t::dbg_start_process(
     printf("app_base = %x\n", app_base);
     stack = SegValue(ss);
     printf("name %s \n",path);
+
+    idados_sync(); //<-
+
     create_process_start_event(path);
     return DRC_OK;
 }
@@ -184,7 +211,7 @@ void dosbox_debmod_t::create_process_start_event(const char *path)
     ev_modeinfo.base = app_base + 0x100; //base + PSP //entry_point; //pi.codeaddr;
     ev_modeinfo.size = 0;
     ev_modeinfo.rebase_to = app_base + 0x100; //base + PSP //entry_point;
-    events.enqueue(ev, IN_BACK);
+    add_debug_event(ev, IN_BACK);
 }
 
 //--------------------------------------------------------------------------
@@ -215,6 +242,7 @@ gdecode_t idaapi dosbox_debmod_t::dbg_get_debug_event(debug_event_t *event, int 
         return GDE_NO_EVENT;
     }
 
+    std::lock_guard<std::mutex> guard(events_lock);
     while (true)
     {
         // are there any pending events?
@@ -243,22 +271,26 @@ drc_t idaapi dosbox_debmod_t::dbg_prepare_to_pause_process(qstring* /*errbuf*/)
 {
     debug_event_t ev;
  
-    ev.set_eid(NO_EVENT);
+    idados_sync_request(); //->
+
     ev.pid = NO_PROCESS;
     ev.tid = NO_PROCESS;
     bptaddr_t& ev_bpt = ev.set_bpt();
-    ev_bpt.hea = BADADDR; //addr; //BADADDR; //r_debug.base - addr; //BADADDR; //addr;//r_debug.base - addr;
-    ev_bpt.kea = BADADDR;//(ea_t)reg_eip;
+    ev_bpt.hea = BADADDR;
+    ev_bpt.kea = BADADDR;
     ev.ea = (ea_t)GetAddress(SegValue(cs), reg_eip);
     ev.handled = true;
     excinfo_t& ev_exc = ev.set_exception();
     ev_exc.code = 0;
     ev_exc.can_cont = true;
     ev_exc.ea = BADADDR;
-
-    events.enqueue(ev, IN_BACK);
+    ev.set_eid(NO_EVENT);
 
     idados_stopped();
+
+    idados_sync(); //<-
+
+    add_debug_event(ev, IN_BACK);
 
     return DRC_OK;
 }
@@ -274,7 +306,7 @@ drc_t idaapi dosbox_debmod_t::dbg_exit_process(qstring* /*errbuf*/)
     ev.ea = BADADDR;
     ev.handled = false;
 
-    events.enqueue(ev, IN_BACK);
+    add_debug_event(ev, IN_BACK);
   
   
     return DRC_OK;
@@ -297,13 +329,21 @@ drc_t idaapi dosbox_debmod_t::dbg_continue_after_event(const debug_event_t *even
     // it must be ready for a bunch of events, process all of them
     // and only after that resume the whole application or part of it.
     // fixme: rewrite event handling in the debugger
-    if (!events.empty())
     {
-        printf("Events in the event queue.\n");
-        return DRC_OK;
+        std::lock_guard<std::mutex> guard(events_lock);
+        if (!events.empty())
+        {
+            printf("Events in the event queue.\n");
+            return DRC_OK;
+        }
     }
 
+    idados_sync_request(); //->
+
     idados_running();
+
+    idados_sync(); //<-
+
     return DRC_OK;
 }
 
@@ -336,6 +376,9 @@ drc_t idaapi dosbox_debmod_t::dbg_set_resume_mode(thid_t tid, resume_mode_t resm
     }
 
     stepping[tid] = true;
+
+    idados_sync_request(); //->
+
     DEBUG_RemoteStep();
 
     debug_event_t ev;
@@ -345,7 +388,9 @@ drc_t idaapi dosbox_debmod_t::dbg_set_resume_mode(thid_t tid, resume_mode_t resm
     ev.ea =(ea_t)GetAddress(SegValue(cs),reg_ip);
     ev.handled = false;
 
-    events.enqueue(ev, IN_BACK);
+    idados_sync(); //<-
+
+    add_debug_event(ev, IN_BACK);
   
     return DRC_OK;
 }
@@ -357,6 +402,7 @@ drc_t idaapi dosbox_debmod_t::dbg_read_registers(
     regval_t* values,
     qstring* /*errbuf*/)
 {
+    idados_sync_request(); //->
     if ((clsmask & X86_RC_GENERAL) != 0) 
     {
         values[R_EAX   ].ival = (uint64)reg_eax;
@@ -382,6 +428,7 @@ drc_t idaapi dosbox_debmod_t::dbg_read_registers(
         values[R_GS    ].ival = (uint64)SegValue(gs);
         values[R_SS    ].ival = (uint64)SegValue(ss);
     }
+    idados_sync(); //<-
 
     // TODO: clear registers for X86_RC_XMM, X86_RC_FPU, X86_RC_MMX
 
@@ -414,7 +461,7 @@ drc_t idaapi dosbox_debmod_t::dbg_write_register(
 {
     uint32 v = (uint32)value->ival;
     printf("write_reg R%d <- %08X\n", reg_idx, v);
-
+    idados_sync_request(); //->
     switch(reg_idx)
     {
         case R_EAX : reg_eax = value->ival; break;
@@ -438,7 +485,7 @@ drc_t idaapi dosbox_debmod_t::dbg_write_register(
 
         default : break;
     }
-
+    idados_sync(); //<-
     return DRC_OK;
 }
 
@@ -493,6 +540,7 @@ drc_t idaapi dosbox_debmod_t::dbg_get_memory_info(meminfo_vec_t &ranges, qstring
     {
         return DRC_NOCHG;
     }
+    idados_sync_request(); //->
 
     // Read from PSP
     int last_user_seg = mem_readw(GetAddress(app_base>>4, 0x2));
@@ -609,7 +657,9 @@ printf("mi = %x,%x\n",mi->startEA, mi->endEA);
     mi->sbase = 0xf100;
     printf("mi = %x,%x\n",mi->start_ea, mi->end_ea);
 
-    printf("CS:IP = %04x:%04x\n",SegValue(cs), reg_eip); 
+    printf("CS:IP = %04x:%04x\n",SegValue(cs), reg_eip);
+
+    idados_sync(); //<-
 
     first_run = false;
 
@@ -619,18 +669,19 @@ printf("mi = %x,%x\n",mi->startEA, mi->endEA);
 //--------------------------------------------------------------------------
 ssize_t idaapi dosbox_debmod_t::dbg_read_memory(ea_t ea, void *buffer, size_t size, qstring* /*errbuf*/)
 {
-    int i;
     PhysPt addr = (PhysPt)ea;
-    uchar *buf;
- 
-    buf = (uchar*)buffer;
+    uchar *buf = (uchar*)buffer;
 
-    for(i = 0; i < size; ++i)
+    idados_sync_request(); //->
+
+    for(int i = 0; i < size; ++i)
     {
         buf[i] = mem_readb(addr);
         // printf("%02x,",buf[i]);
         addr++;
     }
+
+    idados_sync(); //<-
 
     printf("dbg_read_memory @ %x, size=%d\n", ea, size);
     return size;
@@ -644,10 +695,14 @@ ssize_t idaapi dosbox_debmod_t::dbg_write_memory(ea_t ea, const void *buffer, si
         return 0;
     }
 
+    idados_sync_request(); //->
+
     for (int i = 0; i < size; ++i)
     {
         mem_writeb(ea + i, ((Bit8u*)buffer)[i]);
     }
+
+    idados_sync(); //<-
 
     return size;
 }
@@ -741,35 +796,18 @@ bool dosbox_debmod_t::hit_breakpoint(PhysPt addr)
     ev.pid = NO_PROCESS;
     ev.tid = NO_PROCESS;
     bptaddr_t& ev_bpt = ev.set_bpt();
-    ev_bpt.hea = BADADDR; //addr; //BADADDR; //r_debug.base - addr; //BADADDR; //addr;//r_debug.base - addr;
-    ev_bpt.kea = BADADDR;//(ea_t)reg_eip;
+    ev_bpt.hea = BADADDR;
+    ev_bpt.kea = BADADDR;
     ev.ea = addr;
     ev.handled = false;
 
-    events.enqueue(ev, IN_BACK);
+    add_debug_event(ev, IN_BACK);
 
     return 1;
 }
 
-
-inline ea_t find_app_base()
+void dosbox_debmod_t::add_debug_event(const debug_event_t& ev, queue_pos_t pos)
 {
-    ea_t base = (ea_t)GetAddress(SegValue(cs), 0);
-    ea_t addr;
-
-    addr = (ea_t)GetAddress(SegValue(ds), 0);
-
-    if (addr < base)
-    {
-        base = addr;
-    }
-
-    addr = (ea_t)GetAddress(SegValue(ss), 0);
-
-    if (addr < base)
-    {
-        base = addr;
-    }
-
-    return base;
+    std::lock_guard<std::mutex> guard(events_lock);
+    events.enqueue(ev, IN_BACK);
 }

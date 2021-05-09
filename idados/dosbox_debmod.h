@@ -3,6 +3,7 @@
 
 #include <map>
 #include <set>
+#include <mutex>
 
 #include "mem.h"
 
@@ -29,6 +30,8 @@ class dosbox_debmod_t: public pc_debmod_t
     ea_t entry_point;
     ea_t app_base;
     ea_t stack;
+
+    std::mutex events_lock;
 
     void cleanup();
     void create_process_start_event(const char *path);
@@ -99,6 +102,7 @@ public:
     virtual int idaapi dbg_is_ok_bpt(bpttype_t type, ea_t ea, int len) override;
 
     bool hit_breakpoint(PhysPt addr);
+    void add_debug_event(const debug_event_t& ev, queue_pos_t pos);
 };
 
 debmod_t *create_debug_session(void*);

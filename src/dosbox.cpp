@@ -131,8 +131,8 @@ bool ticksLocked;
 void increaseticks();
 
 #ifdef C_IDA_DEBUG
-bool DEBUG_RemoteDataReady(void);
-Bitu DEBUG_EnableDebugger(void);
+bool idados_is_sync_requested();
+Bitu DEBUG_EnableDebugger();
 #endif
 
 static Bitu Normal_Loop(void) {
@@ -157,9 +157,8 @@ static Bitu Normal_Loop(void) {
 			} else {
 				increaseticks();
 #ifdef C_IDA_DEBUG
-				if (DEBUG_RemoteDataReady())
+				if (idados_is_sync_requested())
 				{
-					//DEBUG printf("Remote sent data.\n\n");
 					DEBUG_EnableDebugger();
 				}
 #endif

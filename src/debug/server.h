@@ -7,9 +7,6 @@
 #include <network.hpp>
 #include "mem.h"
 
-#include <semaphore>
-#include <memory>
-
 #define __SINGLE_THREADED_SERVER__
 
 enum broken_conn_hndl_t
@@ -27,7 +24,6 @@ struct dbgsrv_dispatcher_t : public base_dispatcher_t
 
     dbgsrv_dispatcher_t(bool multi_threaded);
 
-//    virtual void collect_cliopts(cliopts_t* out) override;
     virtual client_handler_t* new_client_handler(idarpc_stream_t* irs) override;
 
     virtual void shutdown_gracefully(int signum) override;
@@ -41,13 +37,15 @@ struct dbgsrv_dispatcher_t : public base_dispatcher_t
 // #error "Mixed mode servers do not make sense, they should not be compiled"
 // #endif
 
-extern std::unique_ptr<std::binary_semaphore> idados_sync;
-
 int idados_init();
 void idados_term();
 void idados_hit_breakpoint(PhysPt addr);
 void idados_stopped();
 void idados_running();
 bool idados_is_running();
+void idados_sync();
+void idados_sync_request();
+void idados_try_sync();
+bool idados_is_sync_requested();
 
 #endif

@@ -6,13 +6,13 @@
 #include "dosbox_debmod.h"
 
 #include <thread>
+#include <barrier>
+#include <memory>
 
-std::unique_ptr<std::binary_semaphore> idados_sync;
-std::thread* server_thread = NULL;
-static  bool g_server_running = false;
-
-//lint -esym(714, dump_udt) not referenced
-void dump_udt(const char*, const struct udt_type_data_t&) {}
+std::unique_ptr<std::barrier<>> sync_point;
+std::atomic_bool sync_req;
+std::thread server_thread;
+static bool g_server_running;
 
 //--------------------------------------------------------------------------
 // SERVER GLOBAL VARIABLES
@@ -73,32 +73,26 @@ int idados_init()
         lprintf("Could not initialize subsystem!");
         return -1;
     }
-    idados_sync.reset(new std::binary_semaphore(1));
+    sync_point.reset(new std::barrier(2));
+    sync_req = false;
+    g_server_running = false;
+
     dispatcher.server_password = "";
 
     dispatcher.broken_conns_supported = dosbox_debmod_t::reuse_broken_connections;
     dispatcher.install_signal_handlers();
-    server_thread = new std::thread(&dbgsrv_dispatcher_t::dispatch, &dispatcher);
+    server_thread = std::thread(&dbgsrv_dispatcher_t::dispatch, &dispatcher);
 
     return 1;
 }
 
-bool DEBUG_RemoteDataReady(void) //FIXME need to rework this.
-{
-    if (g_global_server)
-    {
-        return irs_ready(g_global_server->irs, 1); //wait 1 millisecond.
-    }
-
-    return false;
-}
-
 void idados_term()
 {
+    sync_point->arrive_and_drop();
     dispatcher.shutdown_gracefully(0);
-    if (server_thread->joinable())
+    if (server_thread.joinable())
     {
-        server_thread->join();
+        server_thread.join();
     }
 }
 
@@ -129,4 +123,30 @@ void idados_hit_breakpoint(PhysPt addr)
     dm->hit_breakpoint(addr);
 
     idados_stopped();
+}
+
+void idados_sync()
+{
+    sync_point->arrive_and_wait();
+}
+
+void idados_try_sync()
+{
+    if (sync_req)
+    {
+        idados_sync();
+        sync_req = false;
+        idados_sync();
+    }
+}
+
+void idados_sync_request()
+{
+    sync_req = true;
+    idados_sync();
+}
+
+bool idados_is_sync_requested()
+{
+    return sync_req;
 }
